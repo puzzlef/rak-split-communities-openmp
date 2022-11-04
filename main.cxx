@@ -14,6 +14,10 @@ using namespace std;
 #ifndef TYPE
 #define TYPE float
 #endif
+// You can define number of threads with -DMAX_THREADS=...
+#ifndef MAX_THREADS
+#define MAX_THREADS 12
+#endif
 
 
 
@@ -43,6 +47,12 @@ void runExperiment(const G& x, int repeat) {
     // Find RAK using a single thread (strict).
     auto al = rakSeqStatic<true>(x, init, {repeat, tolerance});
     printf("[%09.3f ms; %04d iters.; %01.9f modularity] rakSeqStaticStrict {tolerance=%.0e}\n", al.time, al.iterations, getModularity(x, al, M), tolerance);
+    // Find RAK using a multiple thread (non-strict).
+    auto bk = rakOmpStatic<false>(x, init, {repeat, tolerance});
+    printf("[%09.3f ms; %04d iters.; %01.9f modularity] rakOmpStatic       {tolerance=%.0e}\n", bk.time, bk.iterations, getModularity(x, bk, M), tolerance);
+    // Find RAK using a multiple thread (strict).
+    auto bl = rakOmpStatic<true>(x, init, {repeat, tolerance});
+    printf("[%09.3f ms; %04d iters.; %01.9f modularity] rakOmpStaticStrict {tolerance=%.0e}\n", bl.time, bl.iterations, getModularity(x, bl, M), tolerance);
   }
 }
 
@@ -58,6 +68,8 @@ int main(int argc, char **argv) {
   auto y = symmetricize(x); print(y); printf(" (symmetricize)\n");
   // auto fl = [](auto u) { return true; };
   // selfLoopU(y, w, fl); print(y); printf(" (selfLoopAllVertices)\n");
+  omp_set_num_threads(MAX_THREADS);
+  printf("OMP_NUM_THREADS=%d\n", MAX_THREADS);
   runExperiment(y, repeat);
   printf("\n");
   return 0;
