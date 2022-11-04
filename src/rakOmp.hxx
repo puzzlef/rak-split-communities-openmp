@@ -1,6 +1,5 @@
 #pragma once
 #include <utility>
-#include <memory>
 #include <vector>
 #include <algorithm>
 #include <omp.h>
@@ -10,7 +9,6 @@
 #include "csr.hxx"
 #include "rak.hxx"
 
-using std::unique_ptr;
 using std::tuple;
 using std::vector;
 using std::swap;
@@ -27,11 +25,10 @@ using std::swap;
  * @param vcout total edge weight from vertex u to community C (updated)
  * @param vcom community each vertex belongs to (updated)
  * @param x original graph
- * @param vdom community each vertex belonged to
  * @returns number of changed vertices
  */
 template <bool STRICT=false, class G, class K, class V, class FA, class FP>
-K rakMoveIterationOmp(vector<unique_ptr<vector<K>>>& vcs, vector<unique_ptr<vector<V>>>& vcout, vector<K>& vcom, const G& x, FA fa, FP fp) {
+K rakMoveIterationOmp(vector<vector<K>*>& vcs, vector<vector<V>*>& vcout, vector<K>& vcom, const G& x, FA fa, FP fp) {
   K a = K();
   K S = x.span();
   #pragma omp parallel for schedule(auto) reduction(+:a)
@@ -58,12 +55,12 @@ template <bool STRICT=false, class G, class K, class FA, class FP>
 RakResult<K> rakOmp(const G& x, const vector<K>* q, const RakOptions& o, FA fa, FP fp) {
   using V = typename G::edge_value_type;
   int l = 0;
-  int T = omp_get_num_threads();
+  int T = omp_get_max_threads();
   K S = x.span();
   K N = x.order();
   vector<K> vcom(S);
-  vector<unique_ptr<vector<K>>> vcs(T);
-  vector<unique_ptr<vector<V>>> vcout(T);
+  vector<vector<K>*> vcs(T);
+  vector<vector<V>*> vcout(T);
   for (int t=0; t<T; ++t) {
     vcs[t]   = new vector<K>();
     vcout[t] = new vector<V>(S);
@@ -76,6 +73,10 @@ RakResult<K> rakOmp(const G& x, const vector<K>* q, const RakOptions& o, FA fa, 
       if (float(n)/N <= o.tolerance) break;
     }
   }, o.repeat);
+  for (int t=0; t<T; ++t) {
+    delete vcs[t];
+    delete vcout[t];
+  }
   return {vcom, l, t};
 }
 template <bool STRICT=false, class G, class K, class FA>
