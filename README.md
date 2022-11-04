@@ -1,6 +1,8 @@
 Single-threaded CPU-based Raghavan Albert Kumara ([RAK]) algorithm for
 [community detection].
 
+`TODO`
+
 This is an implementation of a popular label-propagation based community
 detection algorithm called **Raghavan Albert Kumara (RAK)**. Here, every node is
 initialized with a unique label and at every step each node adopts the label
