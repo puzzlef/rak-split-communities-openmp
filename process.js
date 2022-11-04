@@ -4,6 +4,7 @@ const path = require('path');
 
 const RGRAPH = /^Loading graph .*\/(.*?)\.mtx \.\.\./m;
 const RORDER = /^order: (\d+) size: (\d+) (?:\[\w+\] )?\{\} \(symmetricize\)/m;
+const ROMPTH = /^OMP_NUM_THREADS=(\d+)/;
 const RORGNL = /^\[(\S+?) modularity\] noop/;
 const RRESLT = /^\[(\S+?) ms; (\d+) iters\.; (\S+?) modularity\] (\w+)(?:\s+\{tolerance=(\S+?)\})?/m;
 
@@ -53,6 +54,10 @@ function readLogLine(ln, data, state) {
     var [, order, size] = RORDER.exec(ln);
     state.order = parseFloat(order);
     state.size  = parseFloat(size);
+  }
+  else if (ROMPTH.test(ln)) {
+    var [, omp_num_threads] = ROMPTH.exec(ln);
+    state.omp_num_threads   = parseFloat(omp_num_threads);
   }
   else if (RORGNL.test(ln)) {
     var [, modularity] = RORGNL.exec(ln);
