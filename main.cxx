@@ -12,7 +12,7 @@ using namespace std;
 
 // You can define datatype with -DTYPE=...
 #ifndef TYPE
-#define TYPE float
+#define TYPE double
 #endif
 // You can define number of threads with -DMAX_THREADS=...
 #ifndef MAX_THREADS
@@ -35,12 +35,12 @@ void runExperiment(const G& x, int repeat) {
   using V = typename G::edge_value_type;
   vector<K> *init = nullptr;
   auto M = edgeWeight(x)/2;
-  auto Q = modularity(x, M, 1.0f);
+  auto Q = modularity(x, M, 1.0);
   printf("[%01.6f modularity] noop\n", Q);
   RakOptions o = {repeat};
 
   for (int i=0, f=10; f<=10000; f*=i&1? 5:2, ++i) {
-    float tolerance = 1.0f / f;
+    double tolerance = 1.0 / f;
     // Find RAK using a single thread (non-strict).
     auto ak = rakSeqStatic<false>(x, init, {repeat, tolerance});
     printf("[%09.3f ms; %04d iters.; %01.9f modularity] rakSeqStatic       {tolerance=%.0e}\n", ak.time, ak.iterations, getModularity(x, ak, M), tolerance);

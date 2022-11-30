@@ -59,8 +59,8 @@ RakResult<K> rakSeq(const G& x, const vector<K>* q, const RakOptions& o, FA fa, 
     rakInitialize(vcom, x);
     for (l=0; l<o.maxIterations;) {
       size_t n = rakMoveIteration<STRICT>(vcs, vcout, vcom, x, fa, fp); ++l;
-      PRINTFD("rakSeq(): l=%d, n=%d, N=%d, n/N=%f\n", l, n, N, float(n)/N);
-      if (float(n)/N <= o.tolerance) break;
+      PRINTFD("rakSeq(): l=%d, n=%d, N=%d, n/N=%f\n", l, n, N, double(n)/N);
+      if (double(n)/N <= o.tolerance) break;
     }
   }, o.repeat);
   return {vcom, l, t};

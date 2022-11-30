@@ -69,8 +69,8 @@ RakResult<K> rakOmp(const G& x, const vector<K>* q, const RakOptions& o, FA fa, 
     rakInitialize(vcom, x);
     for (l=0; l<o.maxIterations;) {
       size_t n = rakMoveIterationOmp<STRICT>(vcs, vcout, vcom, x, fa, fp); ++l;
-      PRINTFD("rakOmp(): l=%d, n=%d, N=%d, n/N=%f\n", l, n, N, float(n)/N);
-      if (float(n)/N <= o.tolerance) break;
+      PRINTFD("rakOmp(): l=%d, n=%d, N=%d, n/N=%f\n", l, n, N, double(n)/N);
+      if (double(n)/N <= o.tolerance) break;
     }
   }, o.repeat);
   for (int t=0; t<T; ++t) {

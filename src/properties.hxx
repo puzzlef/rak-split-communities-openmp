@@ -47,9 +47,9 @@ auto maxDegree(const G& x) {
 }
 
 template <class G>
-inline float avgDegree(const G& x) {
+inline double avgDegree(const G& x) {
   size_t N = x.order();
-  return N==0? 0 : x.size()/float(N);
+  return N==0? 0 : x.size()/double(N);
 }
 
 
@@ -73,8 +73,8 @@ auto minMaxAvgDegree(const G& x) {
 // Fully connectedness fraction.
 
 template <class G>
-inline float density(const G& x) {
-  float N = x.order();
+inline double density(const G& x) {
+  double N = x.order();
   return N>0? x.size()/(N*N) : 0;
 }
 
