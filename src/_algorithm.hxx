@@ -737,6 +737,31 @@ inline void sortValues(J& x, FL fl) {
 
 
 
+// MOST-FREQUENT
+// -------------
+// Get the value that appears most often (must be sorted).
+
+template <class I>
+auto most_frequent(I ib, I ie) {
+  using T = typename iterator_traits<I>::value_type;
+  T v = T(), a = T();
+  size_t m = 0, n = 0;
+  for (; ib!=ie; ++ib) {
+    if (*ib==v) { ++m; continue; }
+    if (m>n)    { a = v; n = m; }
+    v = *ib; m = 1;
+  }
+  if (m>n) a = v;
+  return a;
+}
+template <class J>
+auto mostFrequent(const J& x) {
+  return most_frequent(x.begin(), x.end());
+}
+
+
+
+
 // SET-DIFFERENCE-*
 // ----------------
 

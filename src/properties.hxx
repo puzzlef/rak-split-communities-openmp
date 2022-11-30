@@ -27,7 +27,7 @@ inline auto degrees(const G& x) {
 template <class G>
 auto minDegree(const G& x) {
   using K = typename G::key_type;
-  K min = x.order();
+  K min = K(x.order());
   x.forEachVertexKey([&](auto u) {
     auto d = x.degree(u);
     if (d<min) min = d;
@@ -56,8 +56,7 @@ inline float avgDegree(const G& x) {
 template <class G>
 auto minMaxAvgDegree(const G& x) {
   using K = typename G::key_type;
-  K min = x.order();
-  K max = 0;
+  K min = K(x.order()), max = 0;
   x.forEachVertexKey([&](auto u) {
     auto d = x.degree(u);
     if (d<min) min = d;

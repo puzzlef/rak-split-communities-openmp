@@ -31,7 +31,7 @@ string readFileText(const char *pth) {
   f.seekg(0, ios::end);
   a.resize(f.tellg());
   f.seekg(0);
-  f.read((char*) a.data(), a.size());
+  f.read((char*) a.c_str(), a.size());
   return a;
 }
 

@@ -8,6 +8,7 @@
 #include "_openmp.hxx"
 #include "_string.hxx"
 #include "_utility.hxx"
+#include "_random.hxx"
 #include "_vector.hxx"
 #include "_queue.hxx"
 #include "_bitset.hxx"

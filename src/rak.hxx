@@ -17,11 +17,11 @@ using std::get;
 // -----------
 
 struct RakOptions {
-  int   repeat;
-  float tolerance;
-  int   maxIterations;
+  int    repeat;
+  double tolerance;
+  int    maxIterations;
 
-  RakOptions(int repeat=1, float tolerance=0.05, int maxIterations=20) :
+  RakOptions(int repeat=1, double tolerance=0.05, int maxIterations=20) :
   repeat(repeat), tolerance(tolerance), maxIterations(maxIterations) {}
 };
 
@@ -154,7 +154,7 @@ inline pair<K, V> rakChooseCommunity(const G& x, K u, const vector<K>& vcom, con
  */
 template <bool STRICT=false, class FLAG=bool, class G, class K, class V>
 auto rakAffectedVerticesDeltaScreening(const G& x, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K, V>>& insertions, const vector<K>& vcom) {
-  K S = x.span();
+  size_t S = x.span();
   vector<K> vcs; vector<V> vcout(S);
   vector<FLAG> vertices(S), neighbors(S), communities(S);
   for (const auto& [u, v] : deletions) {
@@ -208,7 +208,7 @@ auto rakAffectedVerticesDeltaScreening(const G& x, const vector<tuple<K, K>>& de
  */
 template <class FLAG=bool, class G, class K, class V>
 auto rakAffectedVerticesFrontier(const G& x, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K, V>>& insertions, const vector<K>& vcom) {
-  K S = x.span();
+  size_t S = x.span();
   vector<FLAG> vertices(S);
   for (const auto& [u, v] : deletions) {
     if (vcom[u] != vcom[v]) continue;

@@ -28,8 +28,8 @@ using std::swap;
  * @returns number of changed vertices
  */
 template <bool STRICT=false, class G, class K, class V, class FA, class FP>
-K rakMoveIteration(vector<K>& vcs, vector<V>& vcout, vector<K>& vcom, const G& x, FA fa, FP fp) {
-  K a = K();
+size_t rakMoveIteration(vector<K>& vcs, vector<V>& vcout, vector<K>& vcom, const G& x, FA fa, FP fp) {
+  size_t a = 0;
   x.forEachVertexKey([&](auto u) {
     if (!fa(u)) return;
     K d = vcom[u];
@@ -51,14 +51,14 @@ template <bool STRICT=false, class G, class K, class FA, class FP>
 RakResult<K> rakSeq(const G& x, const vector<K>* q, const RakOptions& o, FA fa, FP fp) {
   using V = typename G::edge_value_type;
   int l = 0;
-  K S = x.span();
-  K N = x.order();
+  size_t S = x.span();
+  size_t N = x.order();
   vector<K> vcom(S), vcs;
   vector<V> vcout(S);
   float t = measureDuration([&]() {
     rakInitialize(vcom, x);
     for (l=0; l<o.maxIterations;) {
-      K n = rakMoveIteration<STRICT>(vcs, vcout, vcom, x, fa, fp); ++l;
+      size_t n = rakMoveIteration<STRICT>(vcs, vcout, vcom, x, fa, fp); ++l;
       PRINTFD("rakSeq(): l=%d, n=%d, N=%d, n/N=%f\n", l, n, N, float(n)/N);
       if (float(n)/N <= o.tolerance) break;
     }
@@ -95,7 +95,6 @@ inline RakResult<K> rakSeqStatic(const G& x, const vector<K>* q=nullptr, const R
 
 template <bool STRICT=false, class G, class K, class V>
 inline RakResult<K> rakSeqDynamicDeltaScreening(const G& x, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K, V>>& insertions, const vector<K>* q, const RakOptions& o={}) {
-  K S = x.span();
   const vector<K>& vcom = *q;
   auto vaff = rakAffectedVerticesDeltaScreening<STRICT>(x, deletions, insertions, vcom);
   auto fa   = [&](auto u) { return vaff[u]==true; };
@@ -110,7 +109,6 @@ inline RakResult<K> rakSeqDynamicDeltaScreening(const G& x, const vector<tuple<K
 
 template <bool STRICT=false, class G, class K, class V>
 inline RakResult<K> rakSeqDynamicFrontier(const G& x, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K, V>>& insertions, const vector<K>* q, const RakOptions& o={}) {
-  K S = x.span();
   const vector<K>& vcom = *q;
   auto vaff = rakAffectedVerticesFrontier(x, deletions, insertions, vcom);
   auto fa = [&](auto u) { return vaff[u]==true; };

@@ -41,7 +41,7 @@ void readMtxDo(istream& s, FV fv, FE fe) {
   stringstream ls(ln);
   ls >> r >> c >> sz;
   size_t n = max(r, c);
-  for (size_t u=1; u<=n; u++)
+  for (size_t u=1; u<=n; ++u)
     fv(u);  // a.addVertex(u);
 
   // read edges (from, to)
