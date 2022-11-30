@@ -28,9 +28,9 @@ using std::swap;
  * @returns number of changed vertices
  */
 template <bool STRICT=false, class G, class K, class V, class FA, class FP>
-K rakMoveIterationOmp(vector<vector<K>*>& vcs, vector<vector<V>*>& vcout, vector<K>& vcom, const G& x, FA fa, FP fp) {
-  K a = K();
-  K S = x.span();
+size_t rakMoveIterationOmp(vector<vector<K>*>& vcs, vector<vector<V>*>& vcout, vector<K>& vcom, const G& x, FA fa, FP fp) {
+  size_t a = K();
+  size_t S = x.span();
   #pragma omp parallel for schedule(auto) reduction(+:a)
   for (K u=0; u<S; ++u) {
     int t = omp_get_thread_num();
@@ -56,8 +56,8 @@ RakResult<K> rakOmp(const G& x, const vector<K>* q, const RakOptions& o, FA fa, 
   using V = typename G::edge_value_type;
   int l = 0;
   int T = omp_get_max_threads();
-  K S = x.span();
-  K N = x.order();
+  size_t S = x.span();
+  size_t N = x.order();
   vector<K> vcom(S);
   vector<vector<K>*> vcs(T);
   vector<vector<V>*> vcout(T);
@@ -68,7 +68,7 @@ RakResult<K> rakOmp(const G& x, const vector<K>* q, const RakOptions& o, FA fa, 
   float t = measureDuration([&]() {
     rakInitialize(vcom, x);
     for (l=0; l<o.maxIterations;) {
-      K n = rakMoveIterationOmp<STRICT>(vcs, vcout, vcom, x, fa, fp); ++l;
+      size_t n = rakMoveIterationOmp<STRICT>(vcs, vcout, vcom, x, fa, fp); ++l;
       PRINTFD("rakOmp(): l=%d, n=%d, N=%d, n/N=%f\n", l, n, N, float(n)/N);
       if (float(n)/N <= o.tolerance) break;
     }
@@ -109,7 +109,6 @@ inline RakResult<K> rakOmpStatic(const G& x, const vector<K>* q=nullptr, const R
 
 template <bool STRICT=false, class G, class K, class V>
 inline RakResult<K> rakOmpDynamicDeltaScreening(const G& x, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K, V>>& insertions, const vector<K>* q, const RakOptions& o={}) {
-  K S = x.span();
   const vector<K>& vcom = *q;
   auto vaff = rakAffectedVerticesDeltaScreening<STRICT>(x, deletions, insertions, vcom);
   auto fa   = [&](auto u) { return vaff[u]==true; };
@@ -124,7 +123,6 @@ inline RakResult<K> rakOmpDynamicDeltaScreening(const G& x, const vector<tuple<K
 
 template <bool STRICT=false, class G, class K, class V>
 inline RakResult<K> rakOmpDynamicFrontier(const G& x, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K, V>>& insertions, const vector<K>* q, const RakOptions& o={}) {
-  K S = x.span();
   const vector<K>& vcom = *q;
   auto vaff = rakAffectedVerticesFrontier(x, deletions, insertions, vcom);
   auto fa = [&](auto u) { return vaff[u]==true; };
