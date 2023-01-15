@@ -135,6 +135,7 @@ $ ...
 
 [![](https://i.imgur.com/7QLfaW3.jpg)](https://www.youtube.com/watch?v=IwiYQILYXDQ)<br>
 [![ORG](https://img.shields.io/badge/org-puzzlef-green?logo=Org)](https://puzzlef.github.io)
+[![DOI](https://zenodo.org/badge/561733691.svg)](https://zenodo.org/badge/latestdoi/561733691)
 
 
 [gist]: https://gist.github.com/wolfram77/d4503226d989c2752210df65ea12ec4d
