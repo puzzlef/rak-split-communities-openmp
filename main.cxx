@@ -6,6 +6,7 @@
 #include <string>
 #include <iostream>
 #include <algorithm>
+#include <omp.h>
 #include "src/main.hxx"
 
 using namespace std;
@@ -61,10 +62,18 @@ void runExperiment(const G& x) {
     );
   };
   // Find static RAK.
-  auto b1 = rakStaticOmp<false>(x, init, {repeat});
-  flog(b1, "rakStaticOmpDisabled");
-  auto b2 = rakStaticOmp<true> (x, init, {repeat});
-  flog(b2, "rakStaticOmpEnabled");
+  omp_set_schedule(omp_sched_static, 2048);
+  auto b1 = rakStaticOmp(x, init, {repeat});
+  flog(b1, "rakStaticOmpStaticSchedule");
+  omp_set_schedule(omp_sched_dynamic, 2048);
+  auto b2 = rakStaticOmp(x, init, {repeat});
+  flog(b2, "rakStaticOmpDynamicSchedule");
+  omp_set_schedule(omp_sched_guided, 2048);
+  auto b3 = rakStaticOmp(x, init, {repeat});
+  flog(b3, "rakStaticOmpGuidedSchedule");
+  omp_set_schedule(omp_sched_auto, 2048);
+  auto b4 = rakStaticOmp(x, init, {repeat});
+  flog(b4, "rakStaticOmpAutoSchedule");
 }
 
 
