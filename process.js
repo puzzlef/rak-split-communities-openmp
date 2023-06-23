@@ -60,11 +60,11 @@ function readLogLine(ln, data, state) {
     state.size  = parseFloat(size);
   }
   else if (RRESLT.test(ln)) {
-    var [, num_threads, preprocessing_time, time, iterations, modularity, technique] = RRESLT.exec(ln);
+    var [, num_threads, time, preprocessing_time, iterations, modularity, technique] = RRESLT.exec(ln);
     data.get(state.graph).push(Object.assign({}, state, {
       num_threads: parseFloat(num_threads),
-      preprocessing_time:    parseFloat(preprocessing_time),
       time:        parseFloat(time),
+      preprocessing_time:    parseFloat(preprocessing_time),
       iterations:  parseFloat(iterations),
       modularity:  parseFloat(modularity),
       technique,
