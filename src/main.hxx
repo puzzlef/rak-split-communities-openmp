@@ -11,4 +11,4 @@
 #include "properties.hxx"
 #include "modularity.hxx"
 #include "random.hxx"
-#include "louvain.hxx"
+#include "rak.hxx"

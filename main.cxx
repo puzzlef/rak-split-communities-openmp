@@ -1,8 +1,11 @@
+#include <cstdint>
+#include <cstdio>
 #include <utility>
+#include <random>
 #include <vector>
 #include <string>
-#include <cstdio>
 #include <iostream>
+#include <algorithm>
 #include "src/main.hxx"
 
 using namespace std;
@@ -10,68 +13,73 @@ using namespace std;
 
 
 
-// You can define datatype with -DTYPE=...
+// Fixed config
 #ifndef TYPE
-#define TYPE double
+#define TYPE float
 #endif
-// You can define number of threads with -DMAX_THREADS=...
 #ifndef MAX_THREADS
-#define MAX_THREADS 12
+#define MAX_THREADS 64
+#endif
+#ifndef REPEAT_METHOD
+#define REPEAT_METHOD 5
 #endif
 
 
 
 
-template <class G, class K, class V>
-double getModularity(const G& x, const RakResult<K>& a, V M) {
+// HELPERS
+// -------
+
+template <class G, class K>
+inline double getModularity(const G& x, const RakResult<K>& a, double M) {
   auto fc = [&](auto u) { return a.membership[u]; };
-  return modularityBy(x, fc, M, V(1));
+  return modularityByOmp(x, fc, M, 1.0);
 }
 
 
+
+
+// PERFORM EXPERIMENT
+// ------------------
+
 template <class G>
-void runExperiment(const G& x, int repeat) {
+void runExperiment(const G& x) {
   using K = typename G::key_type;
   using V = typename G::edge_value_type;
+  int repeat  = REPEAT_METHOD;
+  int retries = 5;
   vector<K> *init = nullptr;
-  auto M = edgeWeight(x)/2;
-  auto Q = modularity(x, M, 1.0);
-  printf("[%01.6f modularity] noop\n", Q);
-  RakOptions o = {repeat};
-
-  for (int i=0, f=10; f<=10000; f*=i&1? 5:2, ++i) {
-    double tolerance = 1.0 / f;
-    // Find RAK using a single thread (non-strict).
-    auto ak = rakSeqStatic<false>(x, init, {repeat, tolerance});
-    printf("[%09.3f ms; %04d iters.; %01.9f modularity] rakSeqStatic       {tolerance=%.0e}\n", ak.time, ak.iterations, getModularity(x, ak, M), tolerance);
-    // Find RAK using a single thread (strict).
-    auto al = rakSeqStatic<true>(x, init, {repeat, tolerance});
-    printf("[%09.3f ms; %04d iters.; %01.9f modularity] rakSeqStaticStrict {tolerance=%.0e}\n", al.time, al.iterations, getModularity(x, al, M), tolerance);
-    // Find RAK using a multiple thread (non-strict).
-    auto bk = rakOmpStatic<false>(x, init, {repeat, tolerance});
-    printf("[%09.3f ms; %04d iters.; %01.9f modularity] rakOmpStatic       {tolerance=%.0e}\n", bk.time, bk.iterations, getModularity(x, bk, M), tolerance);
-    // Find RAK using a multiple thread (strict).
-    auto bl = rakOmpStatic<true>(x, init, {repeat, tolerance});
-    printf("[%09.3f ms; %04d iters.; %01.9f modularity] rakOmpStaticStrict {tolerance=%.0e}\n", bl.time, bl.iterations, getModularity(x, bl, M), tolerance);
-  }
+  double M = edgeWeightOmp(x)/2;
+  // Follow a specific result logging format, which can be easily parsed later.
+  auto flog = [&](const auto& ans, const char *technique) {
+    printf(
+      "{%03d threads} -> "
+      "{%09.1fms, %09.1fms preproc, %04d iters, %01.9f modularity} %s\n",
+      MAX_THREADS,
+      ans.time, ans.preprocessingTime,
+      ans.iterations, getModularity(x, ans, M), technique
+    );
+  };
+  // Find static RAK.
+  auto b1 = rakStaticOmp(x, init, {repeat});
+  flog(b1, "rakStaticOmp");
 }
 
 
 int main(int argc, char **argv) {
-  using K = int;
+  using K = uint32_t;
   using V = TYPE;
   install_sigsegv();
-  char *file = argv[1];
-  int repeat = argc>2? stoi(argv[2]) : 5;
-  OutDiGraph<K, None, V> x;  // V w = 1;
-  printf("Loading graph %s ...\n", file);
-  readMtxW<true>(x, file); println(x);
-  auto y = symmetricize(x); print(y); printf(" (symmetricize)\n");
-  // auto fl = [](auto u) { return true; };
-  // selfLoopU(y, w, fl); print(y); printf(" (selfLoopAllVertices)\n");
+  char *file     = argv[1];
+  bool symmetric = argc>2? stoi(argv[2]) : false;
+  bool weighted  = argc>3? stoi(argv[3]) : false;
   omp_set_num_threads(MAX_THREADS);
-  printf("OMP_NUM_THREADS=%d\n", MAX_THREADS);
-  runExperiment(y, repeat);
+  LOG("OMP_NUM_THREADS=%d\n", MAX_THREADS);
+  LOG("Loading graph %s ...\n", file);
+  OutDiGraph<K, None, V> x;
+  readMtxOmpW(x, file, weighted); LOG(""); println(x);
+  if (!symmetric) { x = symmetricizeOmp(x); LOG(""); print(x); printf(" (symmetricize)\n"); }
+  runExperiment(x);
   printf("\n");
   return 0;
 }
