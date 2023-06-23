@@ -202,15 +202,13 @@ inline void rakClearScan(vector<K>& vcs, vector<W>& vcout) {
  * @param vcout total edge weight from vertex u to community C
  * @returns [best community, best edge weight to community]
  */
-template <bool STRICT=false, class G, class K, class W>
+template <class G, class K, class W>
 inline pair<K, W> rakChooseCommunity(const G& x, K u, const vector<K>& vcom, const vector<K>& vcs, const vector<W>& vcout) {
   K d = vcom[u];
   K cmax = K();
   W wmax = W();
-  for (K c : vcs) {
-    // Do some basic randomization if multiple labels have max weight.
-    if (vcout[c]>wmax || (!STRICT && vcout[c]==wmax && (c & 2))) { cmax = c; wmax = vcout[c]; }
-  }
+  for (K c : vcs)
+    if (vcout[c]>wmax) { cmax = c; wmax = vcout[c]; }
   return make_pair(cmax, wmax);
 }
 
@@ -222,42 +220,44 @@ inline pair<K, W> rakChooseCommunity(const G& x, K u, const vector<K>& vcom, con
 
 /**
  * Move each vertex to its best community.
+ * @param vcom community each vertex belongs to (updated)
+ * @param vaff is vertex affected (updated)
  * @param vcs communities vertex u is linked to (updated)
  * @param vcout total edge weight from vertex u to community C (updated)
- * @param vcom community each vertex belongs to (updated)
  * @param x original graph
- * @param vdom community each vertex belonged to
  * @returns number of changed vertices
  */
-template <bool STRICT=false, class G, class K, class W, class FA, class FP>
-inline size_t rakMoveIteration(vector<K>& vcs, vector<W>& vcout, vector<K>& vcom, const G& x, FA fa, FP fp) {
+template <bool PRUNE=false, class G, class K, class W, class B>
+inline size_t rakMoveIteration(vector<K>& vcom, vector<B>& vaff, vector<K>& vcs, vector<W>& vcout, const G& x) {
   size_t a = 0;
   x.forEachVertexKey([&](auto u) {
-    if (!fa(u)) return;
+    if (!vaff[u]) return;
     K d = vcom[u];
     rakClearScan(vcs, vcout);
     rakScanCommunities(vcs, vcout, x, u, vcom);
-    auto [c, w] = rakChooseCommunity<STRICT>(x, u, vcom, vcs, vcout);
-    if (c && c!=d) { vcom[u] = c; ++a; fp(u); }
+    auto [c, w] = rakChooseCommunity(x, u, vcom, vcs, vcout);
+    if (c && c!=d) { vcom[u] = c; ++a; if (PRUNE) x.forEachEdgeKey(u, [&](auto v) { vaff[v] = B(1); }); }
+    if (PRUNE) vaff[u] = B(0);
   });
   return a;
 }
 
 #ifdef OPENMP
-template <bool STRICT=false, class G, class K, class W, class FA, class FP>
-inline size_t rakMoveIterationOmp(vector<vector<K>*>& vcs, vector<vector<W>*>& vcout, vector<K>& vcom, const G& x, FA fa, FP fp) {
+template <bool PRUNE=false, class G, class K, class W, class B>
+inline size_t rakMoveIterationOmp(vector<K>& vcom, vector<B>& vaff, vector<vector<K>*>& vcs, vector<vector<W>*>& vcout, const G& x) {
   size_t a = K();
   size_t S = x.span();
   #pragma omp parallel for schedule(auto) reduction(+:a)
   for (K u=0; u<S; ++u) {
     int t = omp_get_thread_num();
     if (!x.hasVertex(u)) continue;
-    if (!fa(u)) continue;
+    if (!vaff[u]) continue;
     K d = vcom[u];
     rakClearScan(*vcs[t], *vcout[t]);
     rakScanCommunities(*vcs[t], *vcout[t], x, u, vcom);
-    auto [c, w] = rakChooseCommunity<STRICT>(x, u, vcom, *vcs[t], *vcout[t]);
-    if (c && c!=d) { vcom[u] = c; ++a; fp(u); }
+    auto [c, w] = rakChooseCommunity(x, u, vcom, *vcs[t], *vcout[t]);
+    if (c && c!=d) { vcom[u] = c; ++a; if (PRUNE) x.forEachEdgeKey(u, [&](auto v) { vaff[v] = B(1); }); }
+    if (PRUNE) vaff[u] = B(0);
   }
   return a;
 }
@@ -269,22 +269,24 @@ inline size_t rakMoveIterationOmp(vector<vector<K>*>& vcs, vector<vector<W>*>& v
 // RAK
 // ---
 
-template <bool STRICT=false, class G, class K, class FM, class FA, class FP>
-RakResult<K> rakSeq(const G& x, const vector<K>* q, const RakOptions& o, FM fm, FA fa, FP fp) {
+template <bool PRUNE=false, class FLAG=char, class G, class K, class FM>
+RakResult<K> rakSeq(const G& x, const vector<K>* q, const RakOptions& o, FM fm) {
   using V = typename G::edge_value_type;
   using W = RAK_WEIGHT_TYPE;
+  using B = FLAG;
   int l = 0;
   size_t S = x.span();
   size_t N = x.order();
   vector<K> vcom(S), vcs;
   vector<W> vcout(S);
+  vector<B> vaff(S);
   float tm = 0;
   float t  = measureDuration([&]() {
-    tm += measureDuration(fm);
+    tm += measureDuration([&]() { fm(vaff); });
     if (q) rakInitializeFrom(vcom, x, *q);
     else   rakInitialize(vcom, x);
     for (l=0; l<o.maxIterations;) {
-      size_t n = rakMoveIteration<STRICT>(vcs, vcout, vcom, x, fa, fp); ++l;
+      size_t n = rakMoveIteration<PRUNE>(vcom, vaff, vcs, vcout, x); ++l;
       if (double(n)/N <= o.tolerance) break;
     }
   }, o.repeat);
@@ -293,25 +295,27 @@ RakResult<K> rakSeq(const G& x, const vector<K>* q, const RakOptions& o, FM fm, 
 
 
 #ifdef OPENMP
-template <bool STRICT=false, class G, class K, class FM, class FA, class FP>
-RakResult<K> rakOmp(const G& x, const vector<K>* q, const RakOptions& o, FM fm, FA fa, FP fp) {
+template <bool PRUNE=false, class FLAG=char, class G, class K, class FM>
+RakResult<K> rakOmp(const G& x, const vector<K>* q, const RakOptions& o, FM fm) {
   using V = typename G::edge_value_type;
   using W = RAK_WEIGHT_TYPE;
+  using B = FLAG;
   int l = 0;
   int T = omp_get_max_threads();
   size_t S = x.span();
   size_t N = x.order();
   vector<K> vcom(S);
+  vector<B> vaff(S);
   vector<vector<K>*> vcs(T);
   vector<vector<W>*> vcout(T);
   rakAllocateHashtables(vcs, vcout, S);
   float tm = 0;
   float t  = measureDuration([&]() {
-    tm += measureDuration(fm);
+    tm += measureDuration([&]() { fm(vaff); });
     if (q) rakInitializeFromOmp(vcom, x, *q);
     else   rakInitializeOmp(vcom, x);
     for (l=0; l<o.maxIterations;) {
-      size_t n = rakMoveIterationOmp<STRICT>(vcs, vcout, vcom, x, fa, fp); ++l;
+      size_t n = rakMoveIterationOmp<PRUNE>(vcom, vaff, vcs, vcout, x); ++l;
       if (double(n)/N <= o.tolerance) break;
     }
   }, o.repeat);
@@ -326,20 +330,16 @@ RakResult<K> rakOmp(const G& x, const vector<K>* q, const RakOptions& o, FM fm, 
 // RAK STATIC
 // ----------
 
-template <bool STRICT=false, class G, class K>
+template <bool PRUNE=false, class FLAG=char, class G, class K>
 inline RakResult<K> rakStaticSeq(const G& x, const vector<K>* q=nullptr, const RakOptions& o={}) {
-  auto fm = []() {};
-  auto fa = [](auto u) { return u; };
-  auto fp = [](auto u) {};
-  return rakSeq<STRICT>(x, q, o, fm, fa, fp);
+  auto fm = [](auto& vaff) { fillValueU(vaff, FLAG(1)); };
+  return rakSeq<PRUNE>(x, q, o, fm);
 }
 
 #ifdef OPENMP
-template <bool STRICT=false, class G, class K>
+template <bool PRUNE=false, class FLAG=char, class G, class K>
 inline RakResult<K> rakStaticOmp(const G& x, const vector<K>* q=nullptr, const RakOptions& o={}) {
-  auto fm = []() {};
-  auto fa = [](auto u) { return u; };
-  auto fp = [](auto u) {};
-  return rakOmp<STRICT>(x, q, o, fm, fa, fp);
+  auto fm = [](auto& vaff) { fillValueU(vaff, FLAG(1)); };
+  return rakOmp<PRUNE>(x, q, o, fm);
 }
 #endif

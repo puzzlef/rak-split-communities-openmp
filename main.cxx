@@ -62,9 +62,9 @@ void runExperiment(const G& x) {
   };
   // Find static RAK.
   auto b1 = rakStaticOmp<false>(x, init, {repeat});
-  flog(b1, "rakStaticOmpNonStrict");
+  flog(b1, "rakStaticOmpDisabled");
   auto b2 = rakStaticOmp<true> (x, init, {repeat});
-  flog(b2, "rakStaticOmpStrict");
+  flog(b2, "rakStaticOmpEnabled");
 }
 
 
