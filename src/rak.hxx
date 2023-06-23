@@ -247,7 +247,7 @@ template <class G, class K, class W, class B>
 inline size_t rakMoveIterationOmp(vector<K>& vcom, vector<B>& vaff, vector<vector<K>*>& vcs, vector<vector<W>*>& vcout, const G& x) {
   size_t a = K();
   size_t S = x.span();
-  #pragma omp parallel for schedule(runtime) reduction(+:a)
+  #pragma omp parallel for schedule(dynamic, 2048) reduction(+:a)
   for (K u=0; u<S; ++u) {
     int t = omp_get_thread_num();
     if (!x.hasVertex(u)) continue;
