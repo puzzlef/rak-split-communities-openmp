@@ -2,6 +2,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+const RSYSTM = /^ON SYSTEM (.+?) \((.+?) cores\):/m;
 const ROMPTH = /^OMP_NUM_THREADS=(\d+)/;
 const RGRAPH = /^Loading graph .*\/(.*?)\.mtx \.\.\./m;
 const RORDER = /^order: (\d+) size: (\d+) (?:\[\w+\] )?\{\}/m;
@@ -45,6 +46,11 @@ function writeCsv(pth, rows) {
 
 function readLogLine(ln, data, state) {
   ln = ln.replace(/^\d+-\d+-\d+ \d+:\d+:\d+ /, '');
+  if (RSYSTM.test(ln)) {
+    var [, system_name, system_cores] = RSYSTM.exec(ln);
+    state.system_name  = system_name;
+    state.system_cores = parseFloat(system_cores);
+  }
   if (ROMPTH.test(ln)) {
     var [, omp_num_threads] = ROMPTH.exec(ln);
     state.omp_num_threads   = parseFloat(omp_num_threads);
