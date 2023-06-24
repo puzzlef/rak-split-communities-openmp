@@ -8,114 +8,145 @@ that most of its neighbors currently have. In this iterative process densely
 connected groups of nodes form a consensus on a unique label to form
 communities.
 
-When there exist multiple communities with max weight, we randomly pick one of
-them (**non-strict** approach), or pick only the first of them (**strict** approach).
-The algorithm converges when `n%` of vertices dont change their community
-membership (*tolerance*).
+<br>
+<br>
 
-We continue with OpenMP implementation of RAK algorithm for community detection.
-Each thread is given a *separate* hashtable, which it can use for choosing the
-most popular label among its neighbors (by weight). I initially packed the
-hashtables (for each thread) contiguously on a vector. However, i observed that
-*allocating them separately* given almost *2x* performance (by using pointer to
-vectors). OpenMP schedule is `auto` now, we can later choose the best if we
-need.
 
-[![](https://i.imgur.com/zLLrbnj.png)][sheetp]
+### Optimizations
+
+#### OpenMP schedule
+
+It appears `schedule(dynamic, 2048)` is the best choice.
+
+> See
+> [code](https://github.com/puzzlef/rak-communities-openmp/tree/adjust-schedule),
+> [output](https://gist.github.com/wolfram77/5cc08eaceda9c523df9ac6e61ebd8f18), or
+> [sheets][sheets-o1].
+
+[![](https://i.imgur.com/2zJWRfx.png)][sheets-o1]
+[![](https://i.imgur.com/nIaHUdY.png)][sheets-o1]
+
+[sheets-o1]: https://docs.google.com/spreadsheets/d/1yIfh02VFVRU2_RMeh_mVS-djhAb5NA0N1dDeptCpC_w/edit?usp=sharing
+
+
+#### Limiting number of iterations
+
+It appears allowing a **maximum** of `20` **iterations** is ok.
+
+> See
+> [code](https://github.com/puzzlef/rak-communities-openmp/tree/adjust-max-iterations),
+> [output](https://gist.github.com/wolfram77/00eec29e7c4f4debf6bc30a484a6d0a8), or
+> [sheets][sheets-o2].
+
+[![](https://i.imgur.com/eiH1VZz.png)][sheets-o2]
+[![](https://i.imgur.com/m8sPfc6.png)][sheets-o2]
+
+[sheets-o2]: https://docs.google.com/spreadsheets/d/1OpyFI0z89nsUFMPP8v9Dnr-ncZ0MMdDgxz7oFbr5PGc/edit?usp=sharing
+
+
+#### Adjusting strictness
+
+This controls how *equal-weighted labels* are treated. With **strict RAK**, we
+always pick the *first label* with maximum total weight. With **non-strict**
+**RAK**, we *randomly pick* among the top labels in case of a clash.
+
+It appears **strict RAK** is faster (also better modularity).
+
+> See
+> [code](https://github.com/puzzlef/rak-communities-openmp/tree/adjust-strictness),
+> [output](https://gist.github.com/wolfram77/aa67c7533739060e6ee9e588d83561ea), or
+> [sheets][sheets-o3].
+
+[![](https://i.imgur.com/bvOFkrP.png)][sheets-o3]
+[![](https://i.imgur.com/PliysOi.png)][sheets-o3]
+
+[sheets-o3]: https://docs.google.com/spreadsheets/d/1SFFb-RWlOSWV4_OE6-aHSG5FTHOEGSjoJfJ7l2YYzPA/edit?usp=sharing
+
+
+#### Adjusting tolerance
+
+It appears a **tolerance** of `0.05` is ok.
+
+> See
+> [code](https://github.com/puzzlef/rak-communities-openmp/tree/adjust-tolerance),
+> [output](https://gist.github.com/wolfram77/a26f5ed0265a0a37709d86121ef7b1c0), or
+> [sheets][sheets-o4].
+
+[![](https://i.imgur.com/EdiNDJw.png)][sheets-o4]
+[![](https://i.imgur.com/FnOvwga.png)][sheets-o4]
+
+[sheets-o4]: https://docs.google.com/spreadsheets/d/1-F4zsNznUEVkjVIeH4rBdxwpUtUEHXbKm4B9qbsSjho/edit?usp=sharing
+
+
+#### Vertex pruning
+
+When a vertex changes its community, its marks its neighbors to be processed.
+Once a vertex has been processed, it is marked as not to be processed. It helps
+minimize unnecessary computation.
+
+It appears with **vertex pruning** we get better timings.
+
+> See
+> [code](https://github.com/puzzlef/rak-communities-openmp/tree/adjust-pruning),
+> [output](https://gist.github.com/wolfram77/a79bf240bf370ac2c96458418e774ed3), or
+> [sheets][sheets-o5].
+
+[![](https://i.imgur.com/WlQPFHl.png)][sheets-o5]
+[![](https://i.imgur.com/PsePQGc.png)][sheets-o5]
+
+[sheets-o5]: https://docs.google.com/spreadsheets/d/1Ze9qSB3mYTpboyqp5rj5NJCF-iY5dBEeR48EO_IiBlM/edit?usp=sharing
+
+
+#### Hashtable design (data structure) for LPA iteration
+
+One can use `P` `std::map`s (C++ inbuilt map) as the hastable for *LPA*. But
+this has poor performance. So i use a **key-list** and a **full-size values**
+**vector** (*collision-free*) we can dramatically improve performance. However if
+the memory addresses of the hastables are **nearby**, even if each thread uses
+its own hash table performance is not so high possibly due to false
+cache-sharing (**Close-KV**). However if i ensure memory address are farther
+away, the perf. improves (**Far-KV**).
+
+It seems **Far-KV** has the best performance.
+
+> See
+> [code](https://github.com/puzzlef/rak-communities-openmp/tree/adjust-hashtable),
+> [output](https://gist.github.com/wolfram77/8182cf5b270333aee8baa386a1198c61), or
+> [sheets][sheets-o6].
+
+[![](https://i.imgur.com/0YFz3CC.png)][sheets-o6]:
+[![](https://i.imgur.com/rXuTxSf.png)][sheets-o6]
+
+[sheets-o6]: https://docs.google.com/spreadsheets/d/1IA1N6Wh8DGuH4Y1zP73qhE0aBZyMlVLFfza9q1OGy00/edit?usp=sharing
 
 <br>
 <br>
 
-Similar to [previous experiment], we adjust *tolerance* from `0.1` to `0.0001` and
-compare the sequential and OpenMP implementations (non-strict, strict
-approaches).
 
-[![](https://i.imgur.com/10vwdJf.png)][sheetp]
+### Main results
 
-[![](https://i.imgur.com/uhgVh1A.png)][sheetp]
+We combine the above *optimizations* and observe the performance of
+**OpenMP-based RAK** on a number of graphs.
 
-[![](https://i.imgur.com/hH3sKyS.png)][sheetp]
+The input data used for this experiment is available from the
+[SuiteSparse Matrix Collection]. This experiment was done with guidance
+from [Prof. Kishore Kothapalli] and [Prof. Dip Sankar Banerjee].
 
-<br>
-<br>
+> See
+> [code](https://github.com/puzzlef/rak-communities-openmp/tree/input-large),
+> [output](https://gist.github.com/wolfram77/5285c2a893f3ff8b1963eedee7be8967), or
+> [sheets].
 
-On average, **OpenMP-based strict RAK appears to be better**, both in terms of
-time and modularity (2X with 1->). Also we generally see it do better than
-*sequential* approaches (possibly due to better randomization). For a
-*tolerance* of `0.05`, *OpenMP-based strict RAK* (using *12* threads) is *6.75x*
-faster than *sequential non-strict RAK*.
-
-However, OpenMP implementations do not achieve better quality for `coAuthors*`
-graphs. For *social networks*, OpenMP-based non-strict RAK achieves better
-modularity than the strict version. Please see [previous experiment] for difference
-between strict and non-strict versions. Given below is modularity on
-`soc-LiveJournal1` graph.
-
-[![](https://i.imgur.com/4GMolxZ.png)][sheetp]
-
-<br>
-<br>
-
-As brefore, it seems to me a *tolerance* of `0.05` would be a good choice.
-
-All outputs are saved in a [gist] and a small part of the output is listed here.
-Some [charts] are also included below, generated from [sheets]. The input data
-used for this experiment is available from the [SuiteSparse Matrix Collection].
-This experiment was done with guidance from [Prof. Kishore Kothapalli] and
-[Prof. Dip Sankar Banerjee].
-
+[![](https://i.imgur.com/3dvP2C5.png)][sheets]
+[![](https://i.imgur.com/stkmVhD.png)][sheets]
+[![](https://i.imgur.com/OrUoor8.png)][sheets]
 
 [RAK]: https://arxiv.org/abs/0709.2938
 [community detection]: https://en.wikipedia.org/wiki/Community_search
-[previous experiment]: https://github.com/puzzlef/rak-communities-seq
 [Prof. Dip Sankar Banerjee]: https://sites.google.com/site/dipsankarban/
 [Prof. Kishore Kothapalli]: https://faculty.iiit.ac.in/~kkishore/
 [SuiteSparse Matrix Collection]: https://sparse.tamu.edu
-
-<br>
-
-```bash
-$ g++ -std=c++17 -O3 main.cxx
-$ ./a.out ~/data/web-Stanford.mtx
-$ ./a.out ~/data/web-BerkStan.mtx
-$ ...
-
-# Loading graph /home/subhajit/data/web-Stanford.mtx ...
-# order: 281903 size: 2312497 [directed] {}
-# order: 281903 size: 3985272 [directed] {} (symmetricize)
-# OMP_NUM_THREADS=12
-# [-0.000497 modularity] noop
-# [00150.956 ms; 0003 iters.; 0.872759998 modularity] rakSeqStatic       {tolerance=1e-01}
-# [00152.820 ms; 0003 iters.; 0.847129285 modularity] rakSeqStaticStrict {tolerance=1e-01}
-# [00021.234 ms; 0003 iters.; 0.872025967 modularity] rakOmpStatic       {tolerance=1e-01}
-# [00021.151 ms; 0003 iters.; 0.847373843 modularity] rakOmpStaticStrict {tolerance=1e-01}
-# [00149.791 ms; 0003 iters.; 0.872759998 modularity] rakSeqStatic       {tolerance=5e-02}
-# [00147.402 ms; 0003 iters.; 0.847129285 modularity] rakSeqStaticStrict {tolerance=5e-02}
-# [00020.572 ms; 0003 iters.; 0.871711493 modularity] rakOmpStatic       {tolerance=5e-02}
-# [00020.510 ms; 0003 iters.; 0.847401798 modularity] rakOmpStaticStrict {tolerance=5e-02}
-# [00236.676 ms; 0005 iters.; 0.876379907 modularity] rakSeqStatic       {tolerance=1e-02}
-# [00234.186 ms; 0005 iters.; 0.853610516 modularity] rakSeqStaticStrict {tolerance=1e-02}
-# [00030.638 ms; 0005 iters.; 0.875127017 modularity] rakOmpStatic       {tolerance=1e-02}
-# [00030.697 ms; 0005 iters.; 0.852154553 modularity] rakOmpStaticStrict {tolerance=1e-02}
-# [00284.453 ms; 0006 iters.; 0.877100408 modularity] rakSeqStatic       {tolerance=5e-03}
-# [00277.874 ms; 0006 iters.; 0.854387999 modularity] rakSeqStaticStrict {tolerance=5e-03}
-# [00035.626 ms; 0006 iters.; 0.876359046 modularity] rakOmpStatic       {tolerance=5e-03}
-# [00035.454 ms; 0006 iters.; 0.853212833 modularity] rakOmpStaticStrict {tolerance=5e-03}
-# [00366.719 ms; 0008 iters.; 0.877606571 modularity] rakSeqStatic       {tolerance=1e-03}
-# [00407.965 ms; 0009 iters.; 0.855403066 modularity] rakSeqStaticStrict {tolerance=1e-03}
-# [00049.822 ms; 0009 iters.; 0.876784205 modularity] rakOmpStatic       {tolerance=1e-03}
-# [00055.832 ms; 0010 iters.; 0.853845000 modularity] rakOmpStaticStrict {tolerance=1e-03}
-# [00448.478 ms; 0010 iters.; 0.877725899 modularity] rakSeqStatic       {tolerance=5e-04}
-# [00575.903 ms; 0013 iters.; 0.856024683 modularity] rakSeqStaticStrict {tolerance=5e-04}
-# [00064.744 ms; 0011 iters.; 0.876972854 modularity] rakOmpStatic       {tolerance=5e-04}
-# [00069.341 ms; 0013 iters.; 0.854331434 modularity] rakOmpStaticStrict {tolerance=5e-04}
-# [00616.509 ms; 0014 iters.; 0.877830148 modularity] rakSeqStatic       {tolerance=1e-04}
-# [00742.345 ms; 0017 iters.; 0.856140256 modularity] rakSeqStaticStrict {tolerance=1e-04}
-# [00102.798 ms; 0020 iters.; 0.877253771 modularity] rakOmpStatic       {tolerance=1e-04}
-# [00098.093 ms; 0019 iters.; 0.854501545 modularity] rakOmpStaticStrict {tolerance=1e-04}
-#
-# ...
-```
+[sheets]: https://docs.google.com/spreadsheets/d/1jkV3H6sBFgi6FTxJdvPnDtLPC-tp5kTeqtAfgS-ORT4/edit?usp=sharing
 
 <br>
 <br>
@@ -135,10 +166,3 @@ $ ...
 
 [![](https://i.imgur.com/7QLfaW3.jpg)](https://www.youtube.com/watch?v=IwiYQILYXDQ)<br>
 [![ORG](https://img.shields.io/badge/org-puzzlef-green?logo=Org)](https://puzzlef.github.io)
-[![DOI](https://zenodo.org/badge/561733691.svg)](https://zenodo.org/badge/latestdoi/561733691)
-
-
-[gist]: https://gist.github.com/wolfram77/d4503226d989c2752210df65ea12ec4d
-[charts]: https://imgur.com/a/cYzo2Ai
-[sheets]: https://docs.google.com/spreadsheets/d/1D7EpBMmnGlJlk0uUEqUTYWm5Gxc-AXVhSfxbDA56y8Y/edit?usp=sharing
-[sheetp]: https://docs.google.com/spreadsheets/d/e/2PACX-1vRLy5tronSINq10-myRK8M7ykPKwXF0AwwvssViiqbu3va6USoVncYppn6RzvxNqGw8ev2gIDQ1G7wA/pubhtml
