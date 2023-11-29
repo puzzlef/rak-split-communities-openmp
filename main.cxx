@@ -14,35 +14,48 @@ using namespace std;
 
 
 
-// Fixed config
+#pragma region CONFIGURATION
 #ifndef TYPE
+/** Type of edge weights. */
 #define TYPE float
 #endif
 #ifndef MAX_THREADS
+/** Maximum number of threads to use. */
 #define MAX_THREADS 64
 #endif
 #ifndef REPEAT_METHOD
+/** Number of times to repeat each method. */
 #define REPEAT_METHOD 5
 #endif
+#pragma endregion
 
 
 
 
-// HELPERS
-// -------
-
+#pragma region METHODS
+#pragma region HELPERS
+/**
+ * Obtain the modularity of community structure on a graph.
+ * @param x original graph
+ * @param a rak result
+ * @param M sum of edge weights
+ * @returns modularity
+ */
 template <class G, class K>
 inline double getModularity(const G& x, const RakResult<K>& a, double M) {
   auto fc = [&](auto u) { return a.membership[u]; };
-  return modularityByOmp(x, fc, M, 1.0);
+  return modularityBy(x, fc, M, 1.0);
 }
+#pragma endregion
 
 
 
 
-// PERFORM EXPERIMENT
-// ------------------
-
+#pragma region PERFORM EXPERIMENT
+/**
+ * Perform the experiment.
+ * @param x original graph
+ */
 template <class G>
 void runExperiment(const G& x) {
   using K = typename G::key_type;
@@ -55,18 +68,24 @@ void runExperiment(const G& x) {
   auto flog = [&](const auto& ans, const char *technique) {
     printf(
       "{%03d threads} -> "
-      "{%09.1fms, %09.1fms preproc, %04d iters, %01.9f modularity} %s\n",
+      "{%09.1fms, %09.1fms mark, %09.1fms init, %04d iters, %01.9f modularity} %s\n",
       MAX_THREADS,
-      ans.time, ans.preprocessingTime,
+      ans.time, ans.markingTime, ans.initializationTime,
       ans.iterations, getModularity(x, ans, M), technique
     );
   };
   // Find static RAK.
-  auto b1 = rakStaticOmp(x, init, {repeat});
+  auto b1 = rakStaticOmp(x, {repeat});
   flog(b1, "rakStaticOmp");
 }
 
 
+/**
+ * Main function.
+ * @param argc argument count
+ * @param argv argument values
+ * @returns zero on success, non-zero on failure
+ */
 int main(int argc, char **argv) {
   using K = uint32_t;
   using V = TYPE;
@@ -77,10 +96,12 @@ int main(int argc, char **argv) {
   omp_set_num_threads(MAX_THREADS);
   LOG("OMP_NUM_THREADS=%d\n", MAX_THREADS);
   LOG("Loading graph %s ...\n", file);
-  OutDiGraph<K, None, V> x;
+  DiGraph<K, None, V> x;
   readMtxOmpW(x, file, weighted); LOG(""); println(x);
   if (!symmetric) { x = symmetricizeOmp(x); LOG(""); print(x); printf(" (symmetricize)\n"); }
   runExperiment(x);
   printf("\n");
   return 0;
 }
+#pragma endregion
+#pragma endregion
