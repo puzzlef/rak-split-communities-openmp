@@ -9,6 +9,5 @@
 #include "symmetricize.hxx"
 #include "selfLoop.hxx"
 #include "properties.hxx"
-#include "modularity.hxx"
-#include "random.hxx"
+#include "batch.hxx"
 #include "rak.hxx"
