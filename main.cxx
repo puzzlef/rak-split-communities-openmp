@@ -68,15 +68,26 @@ void runExperiment(const G& x) {
   auto flog = [&](const auto& ans, const char *technique) {
     printf(
       "{%03d threads} -> "
-      "{%09.1fms, %09.1fms mark, %09.1fms init, %04d iters, %01.9f modularity} %s\n",
+      "{%09.1fms, %09.1fms mark, %09.1fms init, %09.1fms split, %.3e aff, %04d iters, %01.9f modularity, %zu/%zu disconnected} %s\n",
       MAX_THREADS,
-      ans.time, ans.markingTime, ans.initializationTime,
-      ans.iterations, getModularity(x, ans, M), technique
+      ans.time, ans.markingTime, ans.initializationTime, ans.splittingTime,
+      double(ans.affectedVertices),
+      ans.iterations, getModularity(x, ans, M),
+      countValue(communitiesDisconnectedOmp(x, ans.membership), char(1)),
+      communities(x, ans.membership).size(), technique
     );
   };
   // Find static RAK.
-  auto b1 = rakStaticOmp(x, {repeat});
-  flog(b1, "rakStaticOmp");
+  auto b0 = rakStaticOmp(x, {repeat});
+  flog(b0, "rakStaticOmp");
+  {
+    auto b1 = rakSplitLastStaticOmp<1>(x, {repeat});
+    flog(b1, "rakSplitLastStaticOmp1");
+    auto b2 = rakSplitLastStaticOmp<2>(x, {repeat});
+    flog(b2, "rakSplitLastStaticOmp2");
+    auto b4 = rakSplitLastStaticOmp<4>(x, {repeat});
+    flog(b4, "rakSplitLastStaticOmp4");
+  }
 }
 
 
