@@ -67,8 +67,10 @@ struct RakResult {
   float time;
   /** Time spent in milliseconds for initial marking of affected vertices. */
   float markingTime;
-  /** Time spent in initializing community memberships. */
+  /** Time spent in milliseconds for initializing community memberships. */
   float initializationTime;
+  /** Time spent in milliseconds for splitting disconnected communities. */
+  float splittingTime;
   /** Number of vertices initially marked as affected. */
   size_t affectedVertices;
   #pragma endregion
@@ -82,10 +84,11 @@ struct RakResult {
    * @param time time spent in milliseconds
    * @param markingTime time spent in milliseconds for initial marking of affected vertices
    * @param initializationTime time spent in initializing community memberships
+   * @param splittingTime time spent in splitting disconnected communities
    * @param affectedVertices number of vertices initially marked as affected
    */
-  RakResult(vector<K>&& membership, int iterations=0, float time=0, float markingTime=0, float initializationTime=0, size_t affectedVertices=0) :
-  membership(membership), iterations(iterations), time(time), markingTime(markingTime), initializationTime(initializationTime), affectedVertices(affectedVertices) {}
+  RakResult(vector<K>&& membership, int iterations=0, float time=0, float markingTime=0, float initializationTime=0, float splittingTime=0, size_t affectedVertices=0) :
+  membership(membership), iterations(iterations), time(time), markingTime(markingTime), initializationTime(initializationTime), splittingTime(splittingTime), affectedVertices(affectedVertices) {}
 
 
   /**
@@ -95,10 +98,11 @@ struct RakResult {
    * @param time time spent in milliseconds
    * @param markingTime time spent in milliseconds for initial marking of affected vertices
    * @param initializationTime time spent in initializing community memberships
+   * @param splittingTime time spent in splitting disconnected communities
    * @param affectedVertices number of vertices initially marked as affected
    */
-  RakResult(vector<K>& membership, int iterations=0, float time=0, float markingTime=0, float initializationTime=0, size_t affectedVertices=0) :
-  membership(move(membership)), iterations(iterations), time(time), markingTime(markingTime), initializationTime(initializationTime), affectedVertices(affectedVertices) {}
+  RakResult(vector<K>& membership, int iterations=0, float time=0, float markingTime=0, float initializationTime=0, float splittingTime=0, size_t affectedVertices=0) :
+  membership(move(membership)), iterations(iterations), time(time), markingTime(markingTime), initializationTime(initializationTime), splittingTime(splittingTime), affectedVertices(affectedVertices) {}
   #pragma endregion
 };
 #pragma endregion
@@ -376,7 +380,7 @@ inline auto rakInvoke(const G& x, const RakOptions& o, FI fi, FM fm, FA fa) {
       if (double(n)/N <= o.tolerance) break;
     }
   }, o.repeat);
-  return RakResult<K>(vcom, l, t, tm/o.repeat, ti/o.repeat, countValue(vaff, F(1)));
+  return RakResult<K>(vcom, l, t, tm/o.repeat, ti/o.repeat, 0, countValue(vaff, F(1)));
 }
 
 
@@ -422,7 +426,7 @@ inline auto rakInvokeOmp(const G& x, const RakOptions& o, FI fi, FM fm, FA fa) {
     }
   }, o.repeat);
   rakFreeHashtablesW(vcs, vcout);
-  return RakResult<K>(vcom, l, t, tm/o.repeat, ti/o.repeat, countValueOmp(vaff, F(1)));
+  return RakResult<K>(vcom, l, t, tm/o.repeat, ti/o.repeat, 0, countValueOmp(vaff, F(1)));
 }
 #endif
 #pragma endregion

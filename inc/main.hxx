@@ -12,3 +12,4 @@
 #include "batch.hxx"
 #include "split.hxx"
 #include "rak.hxx"
+#include "rakSplit.hxx"
