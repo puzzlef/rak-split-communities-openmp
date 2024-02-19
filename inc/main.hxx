@@ -10,4 +10,5 @@
 #include "selfLoop.hxx"
 #include "properties.hxx"
 #include "batch.hxx"
+#include "split.hxx"
 #include "rak.hxx"
