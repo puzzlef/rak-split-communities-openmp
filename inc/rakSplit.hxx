@@ -43,9 +43,10 @@ inline auto rakSplitLastInvokeOmp(const G& x, const RakOptions& o, FI fi, FM fm,
   size_t N = x.order();
   // Allocate buffers.
   vector<F> vaff(S);  // Affected vertex flag
-  vector<K> vcom;     // Community membership
+  vector<K> ucom, vcom;         // Community membership
   vector<vector<K>*> vcs(T);    // Hashtable keys
   vector<vector<W>*> vcout(T);  // Hashtable values
+  if (!DYNAMIC) ucom.resize(S);
   if (!DYNAMIC) vcom.resize(S);
   rakAllocateHashtablesW(vcs, vcout, S);
   // Data structures for splitting disconnected communities.
@@ -71,10 +72,11 @@ inline auto rakSplitLastInvokeOmp(const G& x, const RakOptions& o, FI fi, FM fm,
       if (double(n)/N <= o.tolerance) break;
     }
     ts += measureDuration([&]() {
-      if (SPLIT==1)      { splitDisconnectedCommunitiesLpaOmpW<false>(vcom, vaff, x, ucom);  swap(ucom, vcom); }
-      else if (SPLIT==2) { splitDisconnectedCommunitiesLpaOmpW<true> (vcom, vaff, x, ucom);  swap(ucom, vcom); }
-      else if (SPLIT==3) { splitDisconnectedCommunitiesDfsOmpW(vcom, vaff, x, ucom);         swap(ucom, vcom); }
-      else if (SPLIT==4) { splitDisconnectedCommunitiesBfsOmpW(vcom, vaff, us, vs, x, ucom); swap(ucom, vcom); }
+      swap(ucom, vcom);
+      if (SPLIT==1)      splitDisconnectedCommunitiesLpaOmpW<false>(vcom, vaff, x, ucom);
+      else if (SPLIT==2) splitDisconnectedCommunitiesLpaOmpW<true> (vcom, vaff, x, ucom);
+      else if (SPLIT==3) splitDisconnectedCommunitiesDfsOmpW(vcom, vaff, x, ucom);
+      else if (SPLIT==4) splitDisconnectedCommunitiesBfsOmpW(vcom, vaff, us, vs, x, ucom);
     });
   }, o.repeat);
   if (SPLIT) {
