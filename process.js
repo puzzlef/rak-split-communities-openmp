@@ -6,7 +6,7 @@ const RSYSTM = /^ON SYSTEM (.+?) \((.+?) cores\):/m;
 const ROMPTH = /^OMP_NUM_THREADS=(\d+)/;
 const RGRAPH = /^Loading graph .*\/(.*?)\.mtx \.\.\./m;
 const RORDER = /^order: (\d+) size: (\d+) (?:\[\w+\] )?\{\}/m;
-const RRESLT = /^\{(.+?) threads\} -> \{(.+?)ms, (.+?)ms mark, (.+?)ms init, (.+?) iters, (.+?) modularity\} (.+)/m;
+const RRESLT = /^\{(.+?) threads\} -> \{(.+?)ms, (.+?)ms mark, (.+?)ms init, (.+?)ms split, (.+?) aff, (.+?) iters, (.+?) modularity, (\d+)\/(\d+) disconnected\} (.+)/m;
 
 
 
@@ -66,14 +66,18 @@ function readLogLine(ln, data, state) {
     state.size  = parseFloat(size);
   }
   else if (RRESLT.test(ln)) {
-    var [, num_threads, time, marking_time, initialization_time, iterations, modularity, technique] = RRESLT.exec(ln);
+    var [, num_threads, time, marking_time, initialization_time, splitting_time, affected_vertices, iterations, modularity, disconnected_communities, communities, technique] = RRESLT.exec(ln);
     data.get(state.graph).push(Object.assign({}, state, {
       num_threads: parseFloat(num_threads),
       time:        parseFloat(time),
       marking_time:        parseFloat(marking_time),
       initialization_time: parseFloat(initialization_time),
+      splitting_time:      parseFloat(splitting_time),
+      affected_vertices:   parseFloat(affected_vertices),
       iterations:  parseFloat(iterations),
       modularity:  parseFloat(modularity),
+      disconnected_communities: parseFloat(disconnected_communities),
+      communities: parseFloat(communities),
       technique,
     }));
   }
