@@ -19,7 +19,7 @@ Finally, we plot the strong scaling behaviour of GVE-LPA. With doubling of threa
 
 [![](https://i.imgur.com/yUx3fNy.png)][sheets-o2]
 
-Refer to our technical report for more details:
+Refer to our technical report for more details: \
 [GVE-LPA: Fast Label Propagation Algorithm (LPA) for Community Detection in Shared Memory Setting][report].
 
 <br>
