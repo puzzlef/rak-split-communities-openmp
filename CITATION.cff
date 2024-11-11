@@ -4,7 +4,7 @@ authors:
   - family-names: Sahu
     given-names: Subhajit
     orcid: https://orcid.org/0000-0001-5140-6578
-title: "GVE-LPA: Fast Label Propagation Algorithm (LPA) for Community Detection in Shared Memory Setting"
+title: "GSL-LPA: Fast Label Propagation Algorithm (LPA) for Community Detection with no Internally-Disconnected Communities"
 version: 1.0.0
-doi: 10.48550/arXiv.2312.08140
-date-released: 2023-12-13
+doi: 10.48550/arXiv.2403.01261
+date-released: 2024-03-02
