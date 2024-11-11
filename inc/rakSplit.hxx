@@ -50,8 +50,9 @@ inline auto rakSplitLastInvokeOmp(const G& x, const RakOptions& o, FI fi, FM fm,
   if (!DYNAMIC) vcom.resize(S);
   rakAllocateHashtablesW(vcs, vcout, S);
   // Data structures for splitting disconnected communities.
+  vector<F> vis(S), mus(S), mvs(S);
   vector<vector<K>*> us(T), vs(T);        // Per-thread start, frontier vertices for BFS
-  if (SPLIT) {
+  if (SPLIT==4) {
     for (int t=0; t<T; ++t) {
       us[t] = new vector<K>();
       vs[t] = new vector<K>();
@@ -77,9 +78,10 @@ inline auto rakSplitLastInvokeOmp(const G& x, const RakOptions& o, FI fi, FM fm,
       else if (SPLIT==2) splitDisconnectedCommunitiesLpaOmpW<true> (vcom, vaff, x, ucom);
       else if (SPLIT==3) splitDisconnectedCommunitiesDfsOmpW(vcom, vaff, x, ucom);
       else if (SPLIT==4) splitDisconnectedCommunitiesBfsOmpW(vcom, vaff, us, vs, x, ucom);
+      else if (SPLIT==5) splitDisconnectedCommunitiesBfsOmpW(vcom, vaff, vis, mus, mvs, x, ucom);
     });
   }, o.repeat);
-  if (SPLIT) {
+  if (SPLIT==4) {
     for (int t=0; t<T; ++t) {
       delete us[t];
       delete vs[t];

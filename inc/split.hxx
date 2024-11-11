@@ -125,5 +125,80 @@ inline void splitDisconnectedCommunitiesBfsOmpW(vector<K>& vcom, vector<B>& vis,
     }
   }
 }
+
+
+/**
+ * Split disconnected communities using BFS, vertex-parallel approach.
+ * @param vcom label/subcommunity each vertex belongs to (output)
+ * @param cvis community visited flags (scratch)
+ * @param vis vertex visited flags (scratch)
+ * @param us start vertices for BFS (scratch)
+ * @param vs frontier vertices for BFS (scratch)
+ * @param x given graph
+ * @param vdom community each vertex belongs to
+ */
+template <class B, class G, class K>
+inline void splitDisconnectedCommunitiesBfsOmpW(vector<K>& vcom, vector<B>& cvis, vector<B>& vis, vector<B>& us, vector<B>& vs, const G& x, const vector<K>& vdom) {
+  size_t S = x.span();
+  size_t N = x.order();
+  size_t NVIS = 0;
+  B CDONE = B(1);
+  // Clear visited flags.
+  #pragma omp parallel for schedule(static, 2048)
+  for (K u=0; u<S; ++u) {
+    cvis[u] = B();
+    vis[u]  = B();
+    us[u]   = B();
+    vs[u]   = B();
+  }
+  // Initiate BFS one vertex per community.
+  #pragma omp parallel for schedule(static, 2048) reduction(+:NVIS)
+  for (K u=0; u<S; ++u) {
+    K d = vdom[u];
+    if (cvis[d]) continue;
+    cvis[d] = CDONE;
+    vcom[u] = u;
+    vis[u]  = B(1);
+    us[u]   = B(1);
+    ++NVIS;
+  }
+  // Perform BFS within each community to split disconnected communities.
+  while (countValueOmp(vis, B(1)) < N) {
+    // Perform BFS within each community, until no more vertices are visited.
+    while (1) {
+      size_t NVISDEL = 0;
+      #pragma omp parallel for schedule(dynamic, 2048) reduction(+:NVISDEL)
+      for (K u=0; u<S; ++u) {
+        if (!us[u]) continue;
+        K d = vdom[u];
+        K c = vcom[u];
+        x.forEachEdgeKey(u, [&](auto v) {
+          if (vis[v] || vdom[v]!=d) return;
+          vcom[v] = c;
+          vis[v]  = B(1);
+          vs[v]   = B(1);
+          ++NVISDEL;
+        });
+      }
+      swap(us, vs);
+      fillValueOmpU(vs, B());
+      NVIS += NVISDEL;
+      if (NVISDEL==0) break;
+    }
+    // if (countValueOmp(vis, B(1))==N) break;
+    // Reinitiate BFS from untouched vertices in each community.
+    ++CDONE;
+    #pragma omp parallel for schedule(static, 2048) reduction(+:NVIS)
+    for (K u=0; u<S; ++u) {
+      K d = vdom[u];
+      if (vis[u] || cvis[d]==CDONE) continue;
+      cvis[d] = CDONE;
+      vcom[u] = u;
+      vis[u]  = B(1);
+      us[u]   = B(1);
+      ++NVIS;
+    }
+  }
+}
 #endif
 #pragma endregion

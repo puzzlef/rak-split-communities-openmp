@@ -83,8 +83,16 @@ void runExperiment(const G& x) {
   {
     auto b1 = rakSplitLastStaticOmp<1>(x, {repeat});
     flog(b1, "rakSplitLastStaticOmp1");
+  }
+  {
     auto b2 = rakSplitLastStaticOmp<2>(x, {repeat});
     flog(b2, "rakSplitLastStaticOmp2");
+  }
+  {
+    auto b5 = rakSplitLastStaticOmp<5>(x, {repeat});
+    flog(b5, "rakSplitLastStaticOmp5");
+  }
+  {
     auto b4 = rakSplitLastStaticOmp<4>(x, {repeat});
     flog(b4, "rakSplitLastStaticOmp4");
   }
